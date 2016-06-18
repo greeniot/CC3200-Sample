@@ -439,7 +439,11 @@ In the browser of our choice we can go to random.org, click on the certificate i
 
 ![Browser Certificate Information](images/random-certificate.png)
 
-Clicking on the certificate name will open a dialog from the OS. Under Windows the dialog looks as follows. We will have to open the second tab here.
+Clicking on the certificate name will open a dialog from the OS. Under Windows the dialog looks as follows. We will have to open the third tab here. In this tab we need to select the root certificate (top of the tree) and view the details.
+
+![Random.org Certificate Path](images/certificate-path.png)
+
+The certificate itself can then be extracted via the certificate details.
 
 ![Random.org Certificate Details](images/certificate-details.png)
 
@@ -447,10 +451,10 @@ We now need to perform the "Copy to file" action. Export the certificate as a *.
 
 1. Download and start [UniFlash](http://www.ti.com/tool/uniflash) for the CC3200.
 2. In Uniflash, click the "add file" operation.
-3. Name the file to /cert/random.der
-4. In the Url field browser to the location of were you have stored random.cer
-5. Select the Erase and Update check boxes
-6. Select the top of the tree (CC31x Flash Setup Control) and then press program.
+3. Name the file to `/cert/random.pem`.
+4. In the url field we select the location where we stored the root certificate.
+5. We now check the erase and update options.
+6. Finally, we select perform the program operation.
 
 Once we started UniFlash we need to create a new configuration. The following screenshot shows the configuration to choose for the CC3200.
 
@@ -466,14 +470,15 @@ For making secure GET requests we use the following function declaration.
 bool httpSecureGetRequest(char* hostname, char* path, char* certificate);
 ```
 
-The function itself is quite similar to the other one, however, we need to talk to the TPM to retrieve the certificate. Hence we have some new dependencies in place.
+The function itself is quite similar to the other one. The changes are all related to introduce the mandatory security layer on top.
 
 ```C
 #include <Energia.h>
 #include <WiFi.h>
 
-bool httpSecureGetRequest(char* host, char* path, char* certificate) {
+bool httpSecureGetRequest(char* host, char* path, char* cert) {
   String hostname = String(host);
+  String certificate = String(cert);
   String head_post = "GET " + String(path) + " HTTP/1.1";
   String head_host = "Host: " + hostname;
   String request = head_post + "\n" + 
@@ -483,6 +488,8 @@ bool httpSecureGetRequest(char* host, char* path, char* certificate) {
   uint32_t host_ip;
   bool success = false;
 
+  SlSockSecureMask cipher { SL_SEC_MASK_TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA };
+  SlSockSecureMethod method { SL_SO_SEC_METHOD_SSLv3_TLSV1_2 };
   SlTimeval_t timeout { .tv_sec = 45, .tv_usec = 0 };
   
   if (sl_NetAppDnsGetHostByName((signed char*)hostname.c_str(), hostname.length(), &host_ip, SL_AF_INET)) {
@@ -490,12 +497,15 @@ bool httpSecureGetRequest(char* host, char* path, char* certificate) {
   }
 
   SlSockAddrIn_t socket_address {
-    .sin_family = SL_AF_INET, .sin_port = sl_Htons(80), .sin_addr = { .s_addr = sl_Htonl(host_ip) }
+    .sin_family = SL_AF_INET, .sin_port = sl_Htons(443), .sin_addr = { .s_addr = sl_Htonl(host_ip) }
   };
 
-  uint16_t socket_handle = sl_Socket(SL_AF_INET, SL_SOCK_STREAM, IPPROTO_TCP);
+  uint16_t socket_handle = sl_Socket(SL_AF_INET, SL_SOCK_STREAM, SL_SEC_SOCKET);
 
-  if (sl_SetSockOpt(socket_handle, SL_SOL_SOCKET, SL_SO_RCVTIMEO, (const void*)&timeout, sizeof(timeout)) >= 0 &&
+  if (sl_SetSockOpt(socket_handle, SL_SOL_SOCKET, SL_SO_SECMETHOD, (const void*)&method, sizeof(method)) >= 0 &&
+      sl_SetSockOpt(socket_handle, SL_SOL_SOCKET, SL_SO_SECURE_MASK, (const void*)&cipher, sizeof(cipher)) >= 0 &&
+      sl_SetSockOpt(socket_handle, SL_SOL_SOCKET, SL_SO_SECURE_FILES_CA_FILE_NAME, (const void*)certificate.c_str(), certificate.length()) >= 0 &&
+      sl_SetSockOpt(socket_handle, SL_SOL_SOCKET, SL_SO_RCVTIMEO, (const void*)&timeout, sizeof(timeout)) >= 0 &&
       sl_Connect(socket_handle, (SlSockAddr_t*)&socket_address, sizeof(SlSockAddrIn_t)) >= 0 &&
       sl_Send(socket_handle, request.c_str(), request.length(), 0) >= 0 &&
       sl_Recv(socket_handle, receive_msg_buffer, sizeof(receive_msg_buffer), 0) >= 0) {
@@ -508,7 +518,155 @@ bool httpSecureGetRequest(char* host, char* path, char* certificate) {
 }
 ```
 
-(tbd)
+So what changed? For the connection we use the `SL_SEC_SOCKET` constant instead of a raw TCP socket. This requires us to set the secure mode via the options. Finally encryption options and the certificate need to be passed in. Note that we also use a different port (`443` instead of `80`). The selection of the right method is quite important.
+
+The following methods exists:
+
+* `SL_SO_SEC_METHOD_SSLV3` for SSL 3
+* `SL_SO_SEC_METHOD_TLSV1` for TLS 1.0
+* `SL_SO_SEC_METHOD_TLSV1_1` for TLS 1.1
+* `SL_SO_SEC_METHOD_TLSV1_2` for TLS 1.2
+* `SL_SO_SEC_METHOD_SSLv3_TLSV1_2` for SSL 3 / TLS 1.2
+* `SL_SO_SEC_METHOD_DLSV1` for DTL 1.0
+
+The right encryption mode need sto be selected as well. Here the following options exist:
+
+* `SL_SEC_MASK_SECURE_DEFAULT`
+* `SL_SEC_MASK_SSL_RSA_WITH_RC4_128_SHA`
+* `SL_SEC_MASK_SSL_RSA_WITH_RC4_128_MD5`
+* `SL_SEC_MASK_TLS_RSA_WITH_AES_256_CBC_SHA`
+* `SL_SEC_MASK_TLS_DHE_RSA_WITH_AES_256_CBC_SHA`
+* `SL_SEC_MASK_TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA`
+* `SL_SEC_MASK_TLS_ECDHE_RSA_WITH_RC4_128_SHA`
+
+The right mask needs to be selected after inspection of the certificate.
+
+Upon execution we may face the error code **-155**. This means that the certificate is wrong. We should use the root certificate (see above) and not one of the derived ones.
+
+Nevertheless, at this point we may face another error code: **-461**. This is the *data verification error*. The error sounds more problematic as it is. The certificate needs to validated on the CC3200. This process includes checking the expiration time. Since we did not set the current date/time the verification fails. We can change it as simple as placing the following snippet in the `setup` function:
+
+```C
+SlDateTime_t current_time = getCurrentTime();
+sl_DevSet(SL_DEVICE_GENERAL_CONFIGURATION, SL_DEVICE_GENERAL_CONFIGURATION_DATE_TIME, sizeof(current_time), (uint8_t*)(&current_time));
+```
+
+where `getCurrentTime` could be be defined as follows:
+
+```C
+SlDateTime_t getCurrentTime() {
+  return CSlDateTime_t {
+    .sl_tm_sec = 30,
+    .sl_tm_min = 25,
+    .sl_tm_hour = 17,
+    .sl_tm_day = 18,
+    .sl_tm_mon = 6,
+    .sl_tm_year = 2016,
+    .sl_tm_week_day = 6,
+    .sl_tm_year_day = 170,
+  };
+}
+```
+
+Of course, this is not really the current time; it is a constant that will is invalid once published. As a first solution this is alright, but a better one uses the time server via UDP.
+
+### Getting the Current Time
+
+The basic interface for getting the time is quite simple. The header looks as follows.
+
+```C
+#pragma once
+#include <WiFi.h>
+
+SlDateTime_t getCurrentTime();
+
+void setCurrentTime();
+```
+
+The `setCurrentTime` is merely doing what we discussed previously: calling `getCurrentTime` and setting the time on the device. So let's dive into the implementation of `getCurrentTime` right away!
+
+```C
+long long total_secs = getUnixTime() - LEAPOCH;
+
+// Break the total seconds into years, months, days, ...
+
+return SlDateTime_t {
+  .sl_tm_sec = remaining_secs % 60,
+  .sl_tm_min = remaining_secs / 60 % 60,
+  .sl_tm_hour = remaining_secs / 3600,
+  .sl_tm_day = remaining_days + 1,
+  .sl_tm_mon = remaining_months + 1,
+  .sl_tm_year = remaining_years + 2000,
+  .sl_tm_week_day = day_of_week,
+  .sl_tm_year_day = day_of_year,
+};
+```
+
+`getUnixTime` is defined to get the official time from an NTP server (starting at 1900) and subtract the 70 years years to normalize the value to the Unix timestamp. The official time is received via UDP as given below.
+
+```C
+uint32_t getOfficialTime() {
+  WiFiUDP udp;
+  IPAddress time_server(129, 6, 15, 29);
+  byte packet_buffer[NTP_PKG_SIZE];
+  uint32_t secs_since_1900 = 0;
+  int retries = 100;
+  udp.begin(UDP_DST_PORT);
+  memset(packet_buffer, 0, NTP_PKG_SIZE);
+
+  // Initialize values needed to form NTP request
+  packet_buffer[0] = 0b11100011;   // LI, Version, Mode
+  packet_buffer[1] = 0;            // Stratum, or type of clock
+  packet_buffer[2] = 6;            // Polling Interval
+  packet_buffer[3] = 0xEC;         // Peer Clock Precision
+
+  // 8 bytes of zero for Root Delay & Root Dispersion
+  packet_buffer[12] = 49;
+  packet_buffer[13] = 0x4E;
+  packet_buffer[14] = 49;
+  packet_buffer[15] = 52;
+
+  udp.beginPacket(time_server, NTP_PORT);
+  udp.write(packet_buffer, NTP_PKG_SIZE);
+  udp.endPacket();
+
+  while (!udp.parsePacket() && retries > 0) {
+    delay(100);
+    retries--;
+  }
+
+  udp.read(packet_buffer, NTP_PKG_SIZE);
+  uint32_t high_word = word(packet_buffer[40], packet_buffer[41]);
+  uint32_t low_word = word(packet_buffer[42], packet_buffer[43]);
+  secs_since_1900 = high_word << 16 | low_word;
+
+  udp.stop();
+  Serial.println(secs_since_1900);
+  return secs_since_1900;
+}
+```
+
+The IP address of the *time.nist.gov* server has been retrieved via the command line.
+
+```plain
+$ ping time.nist.gov
+
+Pinging ntp1.glb.nist.gov [129.6.15.29] with 32 bytes of data:
+```
+
+The rest may seem cryptic (and some lines certainly are!), but the main idea is:
+
+1. Start a UDP server.
+2. Connect to the NTP server.
+3. Send the bytes to the server.
+4. Wait for a response (max. 10 seconds).
+5. Read the response (will be zero if we exceeded the waiting time).
+6. Retrieve the evaluated response.
+
+That's it! Finally, we have some convenience by setting the right time in the beginning. The only thing that's still missing for our tutorial is to read out the random number and show the number by blinking.
+
+### Reading the Content
+
+
 
 ## Conclusions
 
