@@ -3,6 +3,7 @@
 #include "accelerometer.h"
 #include "wifi.h"
 #include "http.h"
+#include "time.h"
 
 #define WLAN_PUB_SSID "YourWifiSsid"
 #define WLAN_KEY_CODE "YourWifiPasscode"
@@ -12,6 +13,7 @@ void setup() {
   Wire.begin();
   connectWifi(WLAN_PUB_SSID, WLAN_KEY_CODE);
   pinMode(RED_LED, OUTPUT);
+  setCurrentTime();
 }
 
 void loop() {
@@ -24,6 +26,6 @@ void loop() {
     digitalWrite(RED_LED, HIGH);  
   }
 
-  httpGetRequest("httpbin.org", "/bytes/4");
+  httpsGetRequest("www.random.org", "/integers/?num=1&min=1&max=100&col=1&base=10&format=plain&rnd=new", "/cert/root.pem");
   delay(30000);
 }
