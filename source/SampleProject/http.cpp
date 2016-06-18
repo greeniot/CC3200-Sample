@@ -4,15 +4,12 @@
 
 #define TIMEOUT (45)
 
-long httpGetRequest(char* host, char* path) {
+long httpGetRequest(char* host, char* path, char* response) {
   String hostname = String(host);
   String head_post = "GET " + String(path) + " HTTP/1.1";
   String head_host = "Host: " + hostname;
-  
-  String request = head_post + "\n" + 
-                   head_host + "\n\n";
+  String request = head_post + "\n" + head_host + "\n\n";
 
-  char receive_msg_buffer[1024];
   uint16_t socket_handle;
   uint32_t host_ip;
   long success;
@@ -68,30 +65,25 @@ long httpGetRequest(char* host, char* path) {
   }
 
   // receive response packet from the server
-  success = sl_Recv(socket_handle, receive_msg_buffer, sizeof(receive_msg_buffer), 0);
+  success = sl_Recv(socket_handle, response, 1024, 0);
 
   if (success < 0) {
     Serial.println("Failed to receive");
     goto cleanup;
   }
-  
-  Serial.println(receive_msg_buffer);
 
   cleanup:
   sl_Close(socket_handle);
   return success;
 }
 
-long httpsGetRequest(char* host, char* path, char* certpath) {
+long httpsGetRequest(char* host, char* path, char* certpath, char* response) {
   String certificate = String(certpath);
   String hostname = String(host);
   String head_post = "GET " + String(path) + " HTTP/1.1";
   String head_host = "Host: " + hostname;
-  
-  String request = head_post + "\n" + 
-                   head_host + "\n\n";
+  String request = head_post + "\n" + head_host + "\n\n";
 
-  char receive_msg_buffer[1024];
   uint16_t socket_handle;
   uint32_t host_ip;
   long success;
@@ -174,14 +166,12 @@ long httpsGetRequest(char* host, char* path, char* certpath) {
   }
 
   // receive response packet from the server
-  success = sl_Recv(socket_handle, receive_msg_buffer, sizeof(receive_msg_buffer), 0);
+  success = sl_Recv(socket_handle, response, 1024, 0);
 
   if (success < 0) {
     Serial.println("Failed to receive");
     goto cleanup;
   }
-  
-  Serial.println(receive_msg_buffer);
 
   cleanup:
   sl_Close(socket_handle);
