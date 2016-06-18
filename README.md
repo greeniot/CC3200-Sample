@@ -666,7 +666,51 @@ That's it! Finally, we have some convenience by setting the right time in the be
 
 ### Reading the Content
 
+To read the content we only need to supply another argument to our HTTP functions: the response. Right now, we use an internal buffer to capture the response. Once we change this to support an out-parameter we are good. With the response in our hands we can now supply a function to parse the message for the random number.
 
+The following code extracts the number from the response. We will first get it, skip the last two characters and reverse go until we see a non-newline character. Then we find the position of the first newline character. This should mark the number pretty well (we actually searched for the last line with content here).
+
+```C
+int extractNumber(char* response) {
+  int length = strlen(response);
+  int lastNewLine = length - 2;
+
+  while (lastNewLine > 0 && response[lastNewLine--] == '\n');
+
+  while (lastNewLine > 0) {
+    if (response[lastNewLine - 1] == '\n') {
+      break;
+    }
+
+    --lastNewLine;
+  }
+
+  return atoi(response + lastNewLine);
+}
+```
+
+The last line with content is then converted using the classical `atoi` function. We save a substring call by doing pointer arithmetic.
+
+This is the final result of this tutorial.
+
+```C
+void loop() {
+  char receive_msg_buffer[1024];
+  httpsGetRequest(RNG_HOST, RNG_PATH, RNG_CERT, receive_msg_buffer);
+  int number = extractNumber(receive_msg_buffer);
+
+  for (int i = 0; i < number; ++i) {
+    digitalWrite(RED_LED, HIGH);
+    delay(400);
+    digitalWrite(RED_LED, LOW);
+    delay(200);
+  }
+
+  delay(1800);
+}
+```
+
+Our loop function gets the content from random.org, extracts the number from the response, indicates the number using the red LED (400ms active, 200ms in between), and finally waits 2s before restarting the whole thing.
 
 ## Conclusions
 
