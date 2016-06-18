@@ -298,7 +298,7 @@ This will activate the LED for at least 1 second.
 
 Until this point we already archieved quite a lot. We started with a simple kind of "Hello World" and reached a stage where we are able to gather sensor information and trigger outputs based on the collected information. Now we want to go one step further.
 
-We can use [random.org](https://random.org) to make a request to its API, e.g., [https://www.random.org/integers/?num=1&min=1&max=100&col=1&base=10&format=plain&rnd=new](https://www.random.org/integers/?num=1&min=1&max=100&col=1&base=10&format=plain&rnd=new). The resulting number will then be displayed using a blinking LED. A five-second pause (LED off) is inserted after each HTTP call.
+We can use [random.org](https://random.org) to make a request to its API, e.g., [to get a single integer](https://www.random.org/integers/?num=1&min=1&max=100&col=1&base=10&format=plain&rnd=new). The resulting number will then be displayed using a blinking LED. A five-second pause (LED off) is inserted after each HTTP call.
 
 Before we can start with an HTTP call we need to establish a network connection. Luckily, the CC3200 LaunchPad comes with a WiFi chip on-board.
 
@@ -415,15 +415,98 @@ Access-Control-Allow-Credentials: true
 L=r
 ```
 
-If we did not receive anything, we should do some debugging to find the origin of the problem.
+If we did not receive anything, we should do some debugging to find the origin of the problem. The last characters are the string representation of the 4 random bytes we are interested in.
 
 ### Debugging the LaunchPad
 
 Debugging software on embedded systems is difficult. Most of the tooling and techniques we've learned to love are not available. Essentially, we are back to the stone age of programming. We've already seen that the `Serial` class represents a useful utility to gain some knowledge about what's actually going on.
 
-(tbd)
+The CC3200 LaunchPad has a JTAG (4 wire) and SWD (2 wire) interface for development and debugging. In this tutorial we will not go to the hardware level. Instead, we'll use the serial interface provided by the FTDI connector via USB. We've already seen that writing messages to the serial interface is an option, however, an even better option is to install the Code Composer Studio from Texas Instruments and use breakpoints. This brings back one of the most useful and efficient debugging methods available in standard programming.
+
+Once we've downloaded and installed the [Code Composer Studio](http://www.ti.com/ccs) we can set it up to connect to the right COM port with the configured bandwidth. It is important to configure CCS to point to the Energia installation path. Otherwise, required libraries and files may not be found. Finally, we may open Energia projects directly from CCS.
+
+Another cool option of CCS is the ability to view the currently used registers and memory directly. This is shown below.
+
+![CCS to inspect CC3200 registers](images/registers.png)
+
+This way we can accelerate the search for possible errors in our code. Assuming that the HTTP request now runs smoothly we can come back to solve our original problem: Making a secure HTTP request from the CC3200.
 
 ### HTTPS with the TPM
+
+Right now we've only managed to make a non-secure, i.e., standard, HTTP request. For making a secure HTTP request we also need the SSL/TLS layer on top of TCP/IP. This requires a certificate to be used. Normally, the browser would automatically get the certificate, validate it, and confirm the ownership with the helper of an external certificate authority (first asking the hosting OS, then a list of web authorities). In case of the CC3200 there is no browser with tons of included features. We need to provide the certificate ourselves!
+
+In the browser of our choice we can go to random.org, click on the certificate icon in the beginning of the location field, and get the details.
+
+![Browser Certificate Information](images/random-certificate.png)
+
+Clicking on the certificate name will open a dialog from the OS. Under Windows the dialog looks as follows. We will have to open the second tab here.
+
+![Random.org Certificate Details](images/certificate-details.png)
+
+We now need to perform the "Copy to file" action. Export the certificate as a *.cer*-file using the DER encoding. The certificate now needs to be stored on the CC3200. The following instructions should help us get going:
+
+1. Download and start [UniFlash](http://www.ti.com/tool/uniflash) for the CC3200.
+2. In Uniflash, click the "add file" operation.
+3. Name the file to /cert/random.der
+4. In the Url field browser to the location of were you have stored random.cer
+5. Select the Erase and Update check boxes
+6. Select the top of the tree (CC31x Flash Setup Control) and then press program.
+
+Once we started UniFlash we need to create a new configuration. The following screenshot shows the configuration to choose for the CC3200.
+
+![UniFlash configuration](images/uniflash-config.png)
+
+The UniFlash application can only program the CC3200 when no other application is accessing the same COM port. Hence we need to disable the Serial Monitor from Energia. Otherwise, we will get a failure message.
+
+The device needs to be in program mode (J8 and SOP2 disconnected) and resetted once told to be programmed.
+
+For making secure GET requests we use the following function declaration.
+
+```C
+bool httpSecureGetRequest(char* hostname, char* path, char* certificate);
+```
+
+The function itself is quite similar to the other one, however, we need to talk to the TPM to retrieve the certificate. Hence we have some new dependencies in place.
+
+```C
+#include <Energia.h>
+#include <WiFi.h>
+
+bool httpSecureGetRequest(char* host, char* path, char* certificate) {
+  String hostname = String(host);
+  String head_post = "GET " + String(path) + " HTTP/1.1";
+  String head_host = "Host: " + hostname;
+  String request = head_post + "\n" + 
+                   head_host + "\n\n";
+
+  char receive_msg_buffer[1024];
+  uint32_t host_ip;
+  bool success = false;
+
+  SlTimeval_t timeout { .tv_sec = 45, .tv_usec = 0 };
+  
+  if (sl_NetAppDnsGetHostByName((signed char*)hostname.c_str(), hostname.length(), &host_ip, SL_AF_INET)) {
+    return false;
+  }
+
+  SlSockAddrIn_t socket_address {
+    .sin_family = SL_AF_INET, .sin_port = sl_Htons(80), .sin_addr = { .s_addr = sl_Htonl(host_ip) }
+  };
+
+  uint16_t socket_handle = sl_Socket(SL_AF_INET, SL_SOCK_STREAM, IPPROTO_TCP);
+
+  if (sl_SetSockOpt(socket_handle, SL_SOL_SOCKET, SL_SO_RCVTIMEO, (const void*)&timeout, sizeof(timeout)) >= 0 &&
+      sl_Connect(socket_handle, (SlSockAddr_t*)&socket_address, sizeof(SlSockAddrIn_t)) >= 0 &&
+      sl_Send(socket_handle, request.c_str(), request.length(), 0) >= 0 &&
+      sl_Recv(socket_handle, receive_msg_buffer, sizeof(receive_msg_buffer), 0) >= 0) {
+    Serial.println(receive_msg_buffer);
+    success = true;  
+  }
+
+  sl_Close(socket_handle);
+  return success;
+}
+```
 
 (tbd)
 
@@ -439,3 +522,5 @@ The LaunchPad is a great device to quickly get going in the embedded world. It c
 * [Sample Project: BabyZen](http://www.codeproject.com/Articles/891868/BabyZen-IoT-with-Azure)
 * [CC3200 SimpleLink LaunchPad User Guide](http://www.ti.com/lit/pdf/swru397)
 * [CC3210 SimpleLink Wireless MCU Specification](http://www.ti.com/lit/gpn/cc3200mod)
+* [Debugging using the Code Composer Studio](http://energia.nu/guide/import-energia-sketch-to-ccsv6/)
+* [UniFlash Quick Start Guide](http://processors.wiki.ti.com/index.php/CC31xx_%26_CC32xx_UniFlash_Quick_Start_Guide)
