@@ -341,11 +341,85 @@ void connectWifi(char* ssid, char* password) {
 
 The steps included here are simple. We start by connecting to the WiFi network. We then wait until the connection is established. Finally, we also wait until the router assigned us some IP. At this point in time the WiFi connection is established and ready to be used.
 
-How to we now make an HTTP request? Well, it turns out that this is not such an easy task!
+How to we now make an HTTP request? Well, it turns out that this is not such an easy task! We'll start with a request to [httpbin.org](http://httpbin.org/) before we deal with [random.org](https://random.org).
 
-(tbd)
+In the beginning our API is as simple as the following declaration:
+
+```C
+bool httpGetRequest(char* hostname, char* path);
+```
+
+We just pass in a hostname, e.g., *httpbin.org*, and a path. In our case we choose `/bytes/4` to obtain 4 random bytes. The source code for the handling function looks close to the code shown below.
+
+```C
+#include <Energia.h>
+#include <WiFi.h>
+
+bool httpGetRequest(char* host, char* path) {
+  String hostname = String(host);
+  String head_post = "GET " + String(path) + " HTTP/1.1";
+  String head_host = "Host: " + hostname;
+  String request = head_post + "\n" + 
+                   head_host + "\n\n";
+
+  char receive_msg_buffer[1024];
+  uint32_t host_ip;
+  bool success = false;
+
+  SlTimeval_t timeout { .tv_sec = 45, .tv_usec = 0 };
+  
+  if (sl_NetAppDnsGetHostByName((signed char*)hostname.c_str(), hostname.length(), &host_ip, SL_AF_INET)) {
+    return false;
+  }
+
+  SlSockAddrIn_t socket_address {
+    .sin_family = SL_AF_INET, .sin_port = sl_Htons(80), .sin_addr = { .s_addr = sl_Htonl(host_ip) }
+  };
+
+  uint16_t socket_handle = sl_Socket(SL_AF_INET, SL_SOCK_STREAM, IPPROTO_TCP);
+
+  if (sl_SetSockOpt(socket_handle, SL_SOL_SOCKET, SL_SO_RCVTIMEO, (const void*)&timeout, sizeof(timeout)) >= 0 &&
+      sl_Connect(socket_handle, (SlSockAddr_t*)&socket_address, sizeof(SlSockAddrIn_t)) >= 0 &&
+      sl_Send(socket_handle, request.c_str(), request.length(), 0) >= 0 &&
+      sl_Recv(socket_handle, receive_msg_buffer, sizeof(receive_msg_buffer), 0) >= 0) {
+    Serial.println(receive_msg_buffer);
+    success = true;  
+  }
+
+  sl_Close(socket_handle);
+  return success;
+}
+```
+
+First we define the request message to send. Note that the double newline at the end is crucial; it is indicating that the header ends here. Otherwise we'll receive a timeout as the server waits for more. Then we retrieve the IP address of the host to connect to. Then we set up the connection socket as TCP/IP on port 80 (standard HTTP connection). The steps to follow are then described as
+
+* setting socket options; in this case we only set the timeout to 45s,
+* connecting to the socket using the previously defined options
+* sending the content: we transmit the request, which is given by the headers only, and finally
+* receiving the answer.
+
+The response will be available as a single string - there is no distinction between headers and content body by default. We need to do the parsing.
+
+Once we deploy the code we should see something similar to the following:
+
+```plain
+HTTP/1.1 200 OK
+Server: nginx
+Date: Sat, 18 Jun 2016 07:24:31 GMT
+Content-Type: application/octet-stream
+Content-Length: 4
+Connection: keep-alive
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+L=r
+```
+
+If we did not receive anything, we should do some debugging to find the origin of the problem.
 
 ### Debugging the LaunchPad
+
+Debugging software on embedded systems is difficult. Most of the tooling and techniques we've learned to love are not available. Essentially, we are back to the stone age of programming. We've already seen that the `Serial` class represents a useful utility to gain some knowledge about what's actually going on.
 
 (tbd)
 

@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include "accelerometer.h"
 #include "wifi.h"
+#include "http.h"
 
 #define WLAN_PUB_SSID "YourWifiSsid"
 #define WLAN_KEY_CODE "YourWifiPasscode"
@@ -22,4 +23,7 @@ void loop() {
   } else {
     digitalWrite(RED_LED, HIGH);  
   }
+
+  httpGetRequest("httpbin.org", "/bytes/4");
+  delay(30000);
 }
