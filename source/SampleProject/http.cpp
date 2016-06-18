@@ -4,12 +4,6 @@
 
 #define TIMEOUT (45)
 
-int getRandomInteger(char* response) {
-  int length = strlen(response);
-  int* pointer = (int*)(response + (length - 4));
-  return *pointer;
-}
-
 long httpGetRequest(char* host, char* path) {
   String hostname = String(host);
   String head_post = "GET " + String(path) + " HTTP/1.1";
@@ -81,11 +75,7 @@ long httpGetRequest(char* host, char* path) {
     goto cleanup;
   }
   
-
   Serial.println(receive_msg_buffer);
-  Serial.print("The random number is: ");
-  Serial.print(getRandomInteger(receive_msg_buffer));
-  Serial.println("");
 
   cleanup:
   sl_Close(socket_handle);
@@ -106,9 +96,9 @@ long httpsGetRequest(char* host, char* path, char* certpath) {
   uint32_t host_ip;
   long success;
 
-  SlSockSecureMask cipher { SL_SEC_MASK_TLS_ECDHE_RSA_WITH_RC4_128_SHA };
+  SlSockSecureMask cipher { SL_SEC_MASK_TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA };
   SlTimeval_t timeout { .tv_sec = TIMEOUT, .tv_usec = 0 };
-  SlSockSecureMethod method { SL_SO_SEC_METHOD_TLSV1_2 };
+  SlSockSecureMethod method { SL_SO_SEC_METHOD_SSLv3_TLSV1_2 };
   
   // retrieve IP from Hostname
   success = sl_NetAppDnsGetHostByName((signed char*)hostname.c_str(), hostname.length(), &host_ip, SL_AF_INET);
@@ -191,7 +181,6 @@ long httpsGetRequest(char* host, char* path, char* certpath) {
     goto cleanup;
   }
   
-
   Serial.println(receive_msg_buffer);
 
   cleanup:
