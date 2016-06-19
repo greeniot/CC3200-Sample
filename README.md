@@ -548,7 +548,7 @@ The right mask needs to be selected after inspection of the certificate.
 
 Upon execution we may face the error code **-155**. This means that the certificate is wrong. We should use the root certificate (see above) and not one of the derived ones.
 
-Nevertheless, at this point we may face another error code: **-461**. This is the *data verification error*. The error sounds more problematic as it is. The certificate needs to validated on the CC3200. This process includes checking the expiration time. Since we did not set the current date/time the verification fails. We can change it as simple as placing the following snippet in the `setup` function:
+Nevertheless, at this point we may face another error code: **-461**. This is the *data verification error*. The error sounds more problematic as it is. The certificate needs to validated on the CC3200. This process includes checking the expiration time. Since we did not set the current date/time and the CC3200 can't possibly figure out the current time all on its own the verification fails. We can change it as simple as placing the following snippet in the `setup` function:
 
 ```C
 SlDateTime_t current_time = getCurrentTime();
@@ -572,7 +572,7 @@ SlDateTime_t getCurrentTime() {
 }
 ```
 
-Of course, this is not really the current time; it is a constant that will is invalid once published. As a first solution this is alright, but a better one uses the time server via UDP.
+Of course, this is not really the current time; it is a constant that will be invalid once published. As a first solution this is alright, because the tolerances on the accuracy of the current time are not super strict. However, a more elegant and reliable one would be to query a time server via UDP for the current time.
 
 ### Getting the Current Time
 
@@ -606,7 +606,7 @@ return SlDateTime_t {
 };
 ```
 
-`getUnixTime` is defined to get the official time from an NTP server (starting at 1900) and subtract the 70 years years to normalize the value to the Unix timestamp. The official time is received via UDP as given below.
+`getUnixTime` is defined to get the official time from an NTP server (starting at 1900) and subtract the 70 years to normalize the value to the Unix timestamp. The official time is received via UDP as given below.
 
 ```C
 uint32_t getOfficialTime() {
@@ -667,13 +667,13 @@ The rest may seem cryptic (and some lines certainly are!), but the main idea is:
 5. Read the response (will be zero if we exceeded the waiting time).
 6. Retrieve the evaluated response.
 
-That's it! Finally, we have some convenience by setting the right time in the beginning. The only thing that's still missing for our tutorial is to read out the random number and show the number by blinking.
+That's it! Finally, the correct current time is conveniently set automatically in the beginning. The only thing that's still missing for our tutorial is to read out the random number we receive in response to our secure HTTP request and show the number by blinking an LED.
 
 ### Reading the Content
 
-To read the content we only need to supply another argument to our HTTP functions: the response. Right now, we use an internal buffer to capture the response. Once we change this to support an out-parameter we are good. With the response in our hands we can now supply a function to parse the message for the random number.
+To read the content we only need to supply another argument to our HTTP functions: the response. Right now, we use an internal buffer to capture the response. Once we change this to support an out-parameter we are good. With the response in our hands we can now supply a function to parse the message for the random number. Since we do not know the index of the random number within the response, we have to dissect the message and look for the desired content.
 
-The following code extracts the number from the response. We will first get it, skip the last two characters and reverse go until we see a non-newline character. Then we find the position of the first newline character. This should mark the number pretty well (we actually searched for the last line with content here).
+The following code extracts the number from the response. We will first skip the last two characters and reverse iterate characters until we see a non-newline character. Then we find the position of the first newline character. This should mark the number pretty well (we actually searched for the last line with content here).
 
 ```C
 int extractNumber(char* response) {
@@ -694,9 +694,9 @@ int extractNumber(char* response) {
 }
 ```
 
-The last line with content is then converted using the classical `atoi` function. We save a substring call by doing pointer arithmetic.
+The last line with content is then converted to an integer using the `atoi` function. We save a substring call by doing some pointer arithmetic.
 
-This is the final result of this tutorial.
+Here is the code that goes in the predefined `loop` function of our sketch (*x.ino*) file. This is the final result of this tutorial.
 
 ```C
 void loop() {
