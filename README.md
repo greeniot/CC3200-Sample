@@ -162,7 +162,7 @@ or some information from an integrated sensor. For the buttons we would use `dig
 
 ### Using the Accelerometer
 
-The board comes with some sensors. There is the temperature sensor (called `tmp006`), which is available at the address 0x41, and an accelerometer (`bma222`) at 0x18. In this sample we will use the accelerometer as it is far easier to use for demo purposes (the latency and accuracy for manipulating temperatures are quite difficult to manage).
+The board comes with some sensors. There is the temperature sensor (called [`tmp006`](http://www.ti.com/lit/ds/symlink/tmp006.pdf)), which is available at the address 0x41, and an accelerometer ([`bma222`](http://www.mouser.com/ds/2/783/BST-BMA222-FL000-02-786483.pdf)) at 0x18. In this sample we will use the accelerometer as it is far easier to use for demo purposes (the latency and accuracy for manipulating temperatures are quite difficult to manage).
 
 **Warning** As there is an overlap in the address register we can't use the yellow and green LED together with the accelerometer (remember that almost all pins are multiplexed). Consequently, we will only use the red LED from now on.
 
@@ -255,11 +255,11 @@ int8_t readSingleAxis(uint8_t axis) {
 }
 ```
 
-Each read operation starts an I2C transmission at the given address. We remember that the address for the accelerometer was 0x18. The access is given by the register specified in the call. The whole flow is only representing the expected I2C timing diagram.
+Each read operation starts an I2C connection to the device at the given address. We remember that the address for the accelerometer was 0x18. We then simply follow the standard I2C communication protocol implemented with help of the Wire library that abstracts away the low level stuff for us.
 
-Having written this part we can adjust the code in the `loop` function to show the red light in case of a "falling" board. From our elementary physics course in school we remember that a falling body is essentially free, i.e., the acceleration in `z` direction will be zero (as compared to `1` in units of *g* for a body standing on the earth's surface).
+Having written this part we can adjust the code in the `loop` function to show the red light in case of a "falling" board. From our elementary physics course in school we remember that a free falling body is essentially force free, i.e., the acceleration in `z` direction will be zero (as compared to `1` in units of *g* for a body standing on the earth's surface). We assume that the `z` axis of the accelerometer is actually pointing "upwards".
 
-As we measure a value of approx. `65` in z-direction by default we may normalize to this value. We should show a red light for values below 0.4 *g*. Our modified code looks as given below.
+As we measure a value of approximately `65` in z-direction by default we may normalize to this value. We should show a red light for values below 0.4 *g*, i.e. when the value drops below `26`. Our modified code looks as given below.
 
 ```C
 #include <Wire.h>
@@ -278,23 +278,23 @@ void loop() {
   if (acc.z > 26) {
     digitalWrite(RED_LED, LOW);
   } else {
-    digitalWrite(RED_LED, HIGH);  
+    digitalWrite(RED_LED, HIGH);
   }
 }
-``` 
+```
 
-Potentially, we want to the warning to stay active for at least some time - in this case we may modify the code to look as follows.
+Potentially, we want the warning to stay active for some minimum duration, say one second. In this case we may modify the code to look as follows.
 
 ```C
 if (acc.z > 26) {
   digitalWrite(RED_LED, LOW);
 } else {
-  digitalWrite(RED_LED, HIGH);  
+  digitalWrite(RED_LED, HIGH);
   delay(1000);
 }
 ```
 
-This will activate the LED for at least 1 second.
+Now, once triggered, the red LED will light up for at least 1 second.
 
 ### HTTP Requests
 
