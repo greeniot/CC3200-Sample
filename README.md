@@ -6,7 +6,7 @@ This is a small tutorial on working with the CC3200 LaunchPad from Texas Instrum
 
 ## Overview
 
-In this sample we will work with the CC3200 LaunchPad. Initially, our target will be to get some LEDs blinking. Then we will use one of the available sensors to control the blinking frequency. Finally, we will get the blinking frequency from some service accessible via HTTP.
+In this sample we will work with the CC3200 LaunchPad. Initially, our target will be to get some LEDs blinking. Then we will use one of the available sensors to switch the LED depending on the sensor readings. Finally, we will get the blinking frequency from some service accessible via HTTP.
 
 ## Requirements
 
