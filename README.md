@@ -433,7 +433,7 @@ Another cool option of CCS is the ability to view the currently used registers a
 
 This way we can accelerate the search for possible errors in our code. Assuming that the HTTP request now runs smoothly we can come back to solve our original problem: Making a secure HTTP request from the CC3200.
 
-### HTTPS with the TPM
+### HTTPS with the TPM (Trusted Platform Module)
 
 Right now we've only managed to make a non-secure, i.e., standard, HTTP request. For making a secure HTTP request we also need the SSL/TLS layer on top of TCP/IP. This requires a certificate to be used. Normally, the browser would automatically get the certificate, validate it, and confirm the ownership with the helper of an external certificate authority (first asking the hosting OS, then a list of web authorities). In case of the CC3200 there is no browser with tons of included features. We need to provide the certificate ourselves!
 
@@ -719,7 +719,7 @@ Our loop function gets the content from random.org, extracts the number from the
 
 ## Conclusions
 
-The LaunchPad is a great device to quickly get going in the embedded world. It comes with a lot of interesting possibilities, such as a TPM or a WiFi chip. The available booster packs and open-design make it an ideal companion for rapid prototyping or IoT sketches in general.
+The LaunchPad is a great device to quickly get going in the embedded world. It comes with a lot of interesting possibilities, such as a TPM or a WiFi chip. The available booster packs, IDEs (+ libraries) and open-design make it an ideal companion for rapid prototyping or IoT sketches in general. Although most functionality is provided by free libraries from Texas Instruments and/or Energia, one has to go low level enough to learn a lot about inernet layers below the application layer.
 
 ## References
 
