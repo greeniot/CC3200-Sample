@@ -158,7 +158,7 @@ So far so good. The next step is to get a little bit more interactive. We could 
 * `PUSH1` (3)
 * `PUSH2` (11)
 
-or some information from an integrated sensor. For the buttons we would use `digitalRead` to get the state (`HIGH` or `LOW`). This could be done via polling.
+or some information from an integrated sensor. For the buttons we would use `digitalRead` (see [reference](http://energia.nu/Reference_Index.html)) to get the state (`HIGH` or `LOW`) and constantly monitor the current state via polling. Buttons are boring so let's go for the sensor input right away.
 
 ### Using the Accelerometer
 
