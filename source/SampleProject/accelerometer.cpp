@@ -17,7 +17,7 @@ uint8_t readI2C(uint8_t base_address, uint8_t register_address) {
   initializeI2C(base_address, register_address);
   Wire.requestFrom(base_address, 1u);
 
-  while (Wire.available() < HIGH);
+  while (Wire.available() < 1u);
 
   return Wire.read();
 }
