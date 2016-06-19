@@ -71,7 +71,7 @@ While you can do everything from the built in editor, you'll probably quickly ge
 
 ### The Code
 
-The [reference](http://energia.nu/Reference_Index.html) section of the Energie homepage will be your best friend when programming the CC3200 LaunchPad, especially in figuring out the inbuilt IO functions. Make sure to also check out the example sketches in *File* / *Examples*.
+The [reference](http://energia.nu/Reference_Index.html) section of the Energia homepage will be your best friend when programming the CC3200 LaunchPad, especially in figuring out the inbuilt IO functions. Make sure to also check out the example sketches in *File* / *Examples*.
 
 The board comes with three LEDs that can be used for simple showcases, testing and prototyping. (Remember that whenever we can blink an LED we can basically control anything.)
 
@@ -162,11 +162,11 @@ or some information from an integrated sensor. For the buttons we would use `dig
 
 ### Using the Accelerometer
 
-The board comes with some sensors. There is the temperature sensor (called `tmp006`), which is available at the address 0x41, and an accelerometer (`bma222`) at 0x18. In this sample we will use the accelerometer as it is far easier to use for demo purposes (the latency and accuracy for manipulating temperatures is quite difficult to manage).
+The board comes with some sensors. There is the temperature sensor (called `tmp006`), which is available at the address 0x41, and an accelerometer (`bma222`) at 0x18. In this sample we will use the accelerometer as it is far easier to use for demo purposes (the latency and accuracy for manipulating temperatures are quite difficult to manage).
 
-**Warning** As there is an overlap in the address register we can't use the yellow and green LED together with the accelerometer. Consequently, we will only use the red LED from now on.
+**Warning** As there is an overlap in the address register we can't use the yellow and green LED together with the accelerometer (remember that almost all pins are multiplexed). Consequently, we will only use the red LED from now on.
 
-For using the accelerometer we will include the *Wire.h*. Also we should put the code we write to read from the accelerometer in a new file. We will call this *accelerometer.cpp* with the header *accelerometer.h*. Initially, our code looks as follows:
+To read out the accelerometer sensor we include the header *Wire.h*. Also we should put the code we write to read from the accelerometer in a new file. We will call it *accelerometer.cpp* with the header *accelerometer.h*. Initially, our code looks as follows:
 
 ```C
 #include <Wire.h>
@@ -174,7 +174,7 @@ For using the accelerometer we will include the *Wire.h*. Also we should put the
 
 void setup() {
   Serial.begin(9600);
-  Serial.println("Entering setup!");  
+  Serial.println("Entering setup!");
   Wire.begin();
   pinMode(RED_LED, OUTPUT);
 }
@@ -192,7 +192,7 @@ void loop() {
 }
 ```
 
-The `readAccelerometer` function comes from our header. In the setup we need to initialize the Wire library. In each iteration we read the acceleromter and print the values to the screen. Running this in Energie should yield output as shown below.
+The `readAccelerometer` function is declared in our new header file. In the `setup` function we need to initialize the Wire library. In each iteration we read the accelerometer and print the values to the screen. Running this in Energia results in the following output.
 
 ![CC3200 Accelerometer Output](images/accelerometer.png)
 
@@ -203,7 +203,7 @@ The `AccData` structure is defined in our header. The code here looks as follows
 #include <stdint.h>
 
 struct AccData {
-  int8_t x; 
+  int8_t x;
   int8_t y;
   int8_t z;
 };
@@ -229,7 +229,7 @@ AccData readAccelerometer() {
 }
 ```
 
-We read the registers for each of the components and return the full result. The question is now how the reading for a single component is defined. The rest is displayed below.
+We read the registers for each of the components of the three dimensional acceleration vector and return the full result. The question is now how the `readSingleAxis` for reading a single component is defined. The rest is displayed below.
 
 ```C
 #include <Energia.h>
