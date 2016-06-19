@@ -1,12 +1,12 @@
 # Working with the CC3200
 
-A small sample using the CC3200 LaunchPad from Texas Instruments.
+This is a small tutorial on working with the CC3200 LaunchPad from Texas Instruments.
 
 ![CC3200 LaunchPad](images/bare.jpg)
 
 ## Overview
 
-In this sample we will work with the CC3200 LaunchPad. Initially, our target will be to integrated LED blinking. Then we will use one of the available sensors to control the blinking frequency. Finally, we will get the blinking frequency from some service accessible via HTTP.
+In this sample we will work with the CC3200 LaunchPad. Initially, our target will be to get some LEDs blinking. Then we will use one of the available sensors to control the blinking frequency. Finally, we will get the blinking frequency from some service accessible via HTTP.
 
 ## Requirements
 
@@ -15,14 +15,14 @@ In order to fully cover this tutorial we need the following setup:
 * The TI CC3200-LaunchXL board
 * One USB micro cable
 * Computer with Windows, Linux, or macOS and an USB port
-* Installed Energia IDE
+* Installed [Energia IDE](http://energia.nu/download/)
 * Internet access via WiFi
 
 We can use the editor provided by Energia or any other editor, e.g., Sublime Text, Emacs, or vim.
 
 ## Step-By-Step
 
-We start by running the Energia IDE. In case the Energia IDE has not been run (with the CC3200) previously we need to follow some instructions.
+We start by running the Energia IDE. In case the Energia IDE has not been run (with the CC3200) previously we need to set everything up first.
 
 ### Energia: First-Time Setup
 
@@ -35,7 +35,7 @@ The CC3200 should not be connected, otherwise we should remove it first. The fol
 1. Download the CC3200 Drivers for Windows from [here](http://energia.nu/files/cc3200_drivers_win.zip).
 2. Unzip and run *DPinst.exe* for the 32-bit version or *DPinst64.exe* for 64-bit version of Windows.
 3. Follow the installer instructions.
-4. Connect the CC3200 LaunchPad. The CC3200 should be automatically recognized.
+4. Connect the CC3200 LaunchPad. The CC3200 should be automatically recognized by Energia.
 
 For Windows 8 or later we may need to disable the signed driver feature, [see this guide](https://learn.sparkfun.com/tutorials/disabling-driver-signature-on-windows-8).
 
@@ -51,7 +51,7 @@ The CC3200 should not be connected, otherwise we should remove it first. The fol
 2. Unzip and run *EnergiaFTDIDrivers2.2.18.pkg*.
 3. Follow the installer instructions.
 4. Reboot the system.
-5. Connect the CC3200 LaunchPad. The CC3200 should be automatically recognized.
+5. Connect the CC3200 LaunchPad. The CC3200 should be automatically recognized by Energia.
 
 ### Energia Basics
 
@@ -59,19 +59,19 @@ The Energia IDE looks as presented in the next image.
 
 ![Energia IDE](images/energia.png)
 
-It contains a code area with a mediocre text editor. The output is shown in the black box on the bottom. The most important file is an Energia project (*x.ino*), which is always contained in a folder with the name of the file (by convention). Even though the Energia project file contains some C-like code it is fully conventional driven, i.e., instead of defining methods and including external files, some important definitions are already made.
+It contains a code area with a mediocre text editor. The output is shown in the black box on the bottom. The most important file is an Energia project (*x.ino*), which is always contained in a folder with the name of the file (by convention). These files are called *sketches*. Every sketch file contains two C-like functions, `setup` and `loop`. Instead of writing everything from scratch ourselves, we typically only fill in the bodies of those two functions. Energia already knows everything about the board and how to talk to it.
 
-The board specific header file and the definitions for `setup` and `loop` have been made already. These two functions will be called from implicitly generated code and are therefore special. `setup` is run during the initialization, `loop` after the initialization. The latter never finishes, as it is invoked over and over again (hence the name `loop`).
+The board specific header file and the definitions for `setup` and `loop` have been made already. These two functions will be called from implicitly generated code and are therefore special. `setup` is run once during the initialization, and `loop` is repeatedly called after the initialization. The latter never finishes, as it is invoked over and over again (hence the name `loop`).
 
-For debugging purposes the serial monitor will be crucial.
+For debugging purposes the serial monitor will be crucial. We'll come back to the monitor in a second.
 
 ![Energia Serial Monitor](images/serial.png)
 
-In *File* / *Preferences* we'll find the option to tell Energia we are using an external editor.
+While you can do everything from the built in editor, you'll probably quickly get annoyed by it. In *File* / *Preferences* we'll find the option to tell Energia that we are using an external editor. You can then simply edit and save the *x.ino* file in your favorite editor. The compilation and flashing the code to the board is still done in the Energia window.
 
 ### The Code
 
-The board comes with three LEDs that can be used in such samples.
+The board comes with three LEDs that can be used for simple showcases, testing and prototyping. (Remember that whenever we can blink an LED we can basically control anything.)
 
 * `RED_LED` (29)
 * `GREEN_LED` (10)
@@ -91,14 +91,14 @@ void loop() {
 }
 ```
 
-This code instructs the LaunchPad to initialize the serial port for sending messages (at 9600 boud). Afterwards, we are printing "Entering setup!" once and "Next loop iteration!" every five seconds. The `delay` function puts the device to sleep for the specified amount of milliseconds.
+This code instructs the LaunchPad to initialize the serial port for sending messages (at 9600 baud). Afterwards, we are printing "Entering setup!" once and "Next loop iteration!" every five seconds. The `delay` function puts the device to sleep for the specified amount of milliseconds. Of course there is no monitor connected to the CC3200 LaunchPad. Instead `Serial.println` transmits the string via USB to your computer, where it is displayed in the serial monitor.
 
-The previously mentioned three LEDs may now be used as follows (instead of their numeric values we fall back to the named macros - its just much easier to read):
+The previously mentioned three LEDs may now be used as follows (instead of their numeric values we fall back to the named macros - it's just much easier to read):
 
 ```C
 void setup() {
   Serial.begin(9600);
-  Serial.println("Entering setup!");  
+  Serial.println("Entering setup!");
   pinMode(RED_LED, OUTPUT);
   pinMode(GREEN_LED, OUTPUT);
   pinMode(YELLOW_LED, OUTPUT);
@@ -120,7 +120,7 @@ void loop() {
 }
 ```
 
-The library that is used by Energia needs to know the type of the pins that are used. Therefore, we have to setup the LEDs in the beginning to be initialized with the right pin mode. For all of them we use the `OUTPUT` setting (resolving to 1, whereas `INPUT` would resolve to 0). The `digitalWrite` function is then used to write a value to a given address, e.g., 1 (named `HIGH`) to the address of the `RED_LED` or 0 (named `LOW`) to the address of the `GREEN_LED`.
+Most pins of the CC3200 are multiplexed, i.e. they can serve different purposes. Most of them can either be used for input or output. Therefore, we have to configure the pins which are connected to the LEDs in the beginning. For all of them we use the `OUTPUT` setting (resolving to 1, whereas `INPUT` would resolve to 0). The `digitalWrite` function is then used to write a value to a given address, e.g., 1 (named `HIGH`) to the address of the `RED_LED` or 0 (named `LOW`) to the address of the `GREEN_LED`.
 
 What happens here is that we get the following sequence:
 
@@ -130,7 +130,7 @@ What happens here is that we get the following sequence:
 * YELLOW (1s)
 * (dark) (0.5s)
 
-Now its time to the connect the LaunchPad and upload it!
+Now it's time to connect the LaunchPad and upload our program!
 
 ### Connecting the LaunchPad
 
@@ -145,7 +145,7 @@ The following instructions give some more detail:
 1. We start by removing both jumpers J8 and SOP2 (if installed).
 2. With the USB connector facing up, we connect one side of the jumper wire to the top of J8 and the other side to the bottom of SOP2.
 
-Now when we run the code from Energia via `CTRL + M` we will see the serial monitor popping up (be sure to have the correct boud rate configured!) and the LEDs start blinking.
+Now when we run the code from Energia via `CTRL + M` we will see the serial monitor popping up (be sure to have the correct baud rate configured!) and the LEDs start blinking.
 
 At this point in time our setup looks similar to the next image.
 
