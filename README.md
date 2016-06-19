@@ -298,7 +298,7 @@ Now, once triggered, the red LED will light up for at least 1 second.
 
 ### HTTP Requests
 
-Until this point we already archieved quite a lot. We started with a simple kind of "Hello World" and reached a stage where we are able to gather sensor information and trigger outputs based on the collected information. Now we want to go one step further.
+Until this point we already archieved quite a lot. We started with a simple kind of "Hello World" and reached a stage where we are able to gather sensor information and trigger outputs based on the collected information. This is the original purpose of microcontrollers - read **hardwired** sensors, process the input and control **hardwired** actuators accordingly. Adding wireless connectivity, especially to the world wide web, opens a whole new universe of possibilities and enables IoT applications. Now we want to take this critical step.
 
 We can use [random.org](https://random.org) to make a request to its API, e.g., [to get a single integer](https://www.random.org/integers/?num=1&min=1&max=100&col=1&base=10&format=plain&rnd=new). The resulting number will then be displayed using a blinking LED. A five-second pause (LED off) is inserted after each HTTP call.
 
@@ -312,38 +312,38 @@ Similar to the integration of the accelerometer we put the code in a new file *w
 void connectWifi(char* ssid, char* password);
 ```
 
-The source file contains quite some debug printing, which is useful to identify what's going on in the setup process. To make it fully work we use the WiFi library that comes with Energia.
+The source file contains quite a number of print statements for debugging, which is useful to identify what's going on in the setup process. To make it fully work we use the WiFi library that comes with Energia.
 
 ```C
 #include "wifi.h"
 #include <Energia.h>
 #include <WiFi.h>
 
-void connectWifi(char* ssid, char* password) {	
+void connectWifi(char* ssid, char* password) {
   Serial.print("Connecting to WIFI network ");
   Serial.print(ssid);
   WiFi.begin(ssid, password);
-  
+
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
     delay(300);
   }
-  
+
   Serial.println(" connected!");
   Serial.print("Waiting for an IP address ");
-  
+
   while (WiFi.localIP() == INADDR_NONE) {
     Serial.print(".");
     delay(300);
   }
-  
+
   Serial.println(" received!");
 }
 ```
 
 The steps included here are simple. We start by connecting to the WiFi network. We then wait until the connection is established. Finally, we also wait until the router assigned us some IP. At this point in time the WiFi connection is established and ready to be used.
 
-How to we now make an HTTP request? Well, it turns out that this is not such an easy task! We'll start with a request to [httpbin.org](http://httpbin.org/) before we deal with [random.org](https://random.org).
+How can we now make an HTTP request? Well, it turns out that this is not such an easy task! We'll start with a request to [httpbin.org](http://httpbin.org/) before we deal with [random.org](https://random.org).
 
 In the beginning our API is as simple as the following declaration:
 
@@ -361,7 +361,7 @@ bool httpGetRequest(char* host, char* path) {
   String hostname = String(host);
   String head_post = "GET " + String(path) + " HTTP/1.1";
   String head_host = "Host: " + hostname;
-  String request = head_post + "\n" + 
+  String request = head_post + "\n" +
                    head_host + "\n\n";
 
   char receive_msg_buffer[1024];
@@ -369,7 +369,7 @@ bool httpGetRequest(char* host, char* path) {
   bool success = false;
 
   SlTimeval_t timeout { .tv_sec = 45, .tv_usec = 0 };
-  
+
   if (sl_NetAppDnsGetHostByName((signed char*)hostname.c_str(), hostname.length(), &host_ip, SL_AF_INET)) {
     return false;
   }
@@ -385,7 +385,7 @@ bool httpGetRequest(char* host, char* path) {
       sl_Send(socket_handle, request.c_str(), request.length(), 0) >= 0 &&
       sl_Recv(socket_handle, receive_msg_buffer, sizeof(receive_msg_buffer), 0) >= 0) {
     Serial.println(receive_msg_buffer);
-    success = true;  
+    success = true;
   }
 
   sl_Close(socket_handle);
