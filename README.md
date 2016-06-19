@@ -728,6 +728,8 @@ The LaunchPad is a great device to quickly get going in the embedded world. It c
 * [SimpleLink Wi-Fi CC3200 LaunchPad Datasheet](http://www.ti.com/tool/cc3200-launchxl)
 * [Sample Project: BabyZen](http://www.codeproject.com/Articles/891868/BabyZen-IoT-with-Azure)
 * [CC3200 SimpleLink LaunchPad User Guide](http://www.ti.com/lit/pdf/swru397)
+* [CC3200 SimpleLink Online Documentation](http://software-dl.ti.com/ecs/cc31xx/APIs/public/cc32xx_simplelink/latest/html/index.html)
+* [CC3200 Peripheral Driver Library User's Guide](http://software-dl.ti.com/ecs/cc31xx/APIs/public/cc32xx_peripherals/latest/html/index.html)
 * [CC3210 SimpleLink Wireless MCU Specification](http://www.ti.com/lit/gpn/cc3200mod)
 * [Debugging using the Code Composer Studio](http://energia.nu/guide/import-energia-sketch-to-ccsv6/)
 * [UniFlash Quick Start Guide](http://processors.wiki.ti.com/index.php/CC31xx_%26_CC32xx_UniFlash_Quick_Start_Guide)
