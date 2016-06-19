@@ -351,7 +351,7 @@ In the beginning our API is as simple as the following declaration:
 bool httpGetRequest(char* hostname, char* path);
 ```
 
-We just pass in a hostname, e.g., *httpbin.org*, and a path. In our case we choose `/bytes/4` to obtain 4 random bytes. The source code for the handling function looks close to the code shown below.
+We just pass in a hostname, e.g., *httpbin.org*, and a path. In our case we choose `/bytes/4` to obtain 4 random bytes. The source code for the handling function looks close to the code shown below. Many of the used functions come form the *SimpleLink* library and you can look them up in the excellent [documentation](http://software-dl.ti.com/ecs/cc31xx/APIs/public/cc32xx_simplelink/latest/html/index.html).
 
 ```C
 #include <Energia.h>
@@ -402,7 +402,7 @@ First we define the request message to send. Note that the double newline at the
 
 The response will be available as a single string - there is no distinction between headers and content body by default. We need to do the parsing.
 
-Once we deploy the code we should see something similar to the following:
+Once we compile and run this code we should see something similar to the following:
 
 ```plain
 HTTP/1.1 200 OK
@@ -414,16 +414,16 @@ Connection: keep-alive
 Access-Control-Allow-Origin: *
 Access-Control-Allow-Credentials: true
 
-L=r
+L8=r
 ```
 
-If we did not receive anything, we should do some debugging to find the origin of the problem. The last characters are the string representation of the 4 random bytes we are interested in.
+If we did not receive anything, we should do some debugging to find the origin of the problem. The last characters are the string representation of the 4 random bytes we are interested in. Note that a random binary byte does not necessarily correspond to a printable ASCII symbol.
 
 ### Debugging the LaunchPad
 
 Debugging software on embedded systems is difficult. Most of the tooling and techniques we've learned to love are not available. Essentially, we are back to the stone age of programming. We've already seen that the `Serial` class represents a useful utility to gain some knowledge about what's actually going on.
 
-The CC3200 LaunchPad has a JTAG (4 wire) and SWD (2 wire) interface for development and debugging. In this tutorial we will not go to the hardware level. Instead, we'll use the serial interface provided by the FTDI connector via USB. We've already seen that writing messages to the serial interface is an option, however, an even better option is to install the Code Composer Studio from Texas Instruments and use breakpoints. This brings back one of the most useful and efficient debugging methods available in standard programming.
+The CC3200 LaunchPad has a JTAG (4 wire) and SWD (2 wire) interface for development and debugging. In this tutorial we will not go to the hardware level. Instead, we'll use the serial interface provided by the FTDI connector via USB. We've already seen that writing messages to the serial interface is an option, however, an even better option is to install the Code Composer Studio from Texas Instruments and use breakpoints. This brings back one of the most useful and efficient debugging methods available in everyday programming.
 
 Once we've downloaded and installed the [Code Composer Studio](http://www.ti.com/ccs) we can set it up to connect to the right COM port with the configured bandwidth. It is important to configure CCS to point to the Energia installation path. Otherwise, required libraries and files may not be found. Finally, we may open Energia projects directly from CCS.
 
@@ -437,21 +437,24 @@ This way we can accelerate the search for possible errors in our code. Assuming 
 
 Right now we've only managed to make a non-secure, i.e., standard, HTTP request. For making a secure HTTP request we also need the SSL/TLS layer on top of TCP/IP. This requires a certificate to be used. Normally, the browser would automatically get the certificate, validate it, and confirm the ownership with the helper of an external certificate authority (first asking the hosting OS, then a list of web authorities). In case of the CC3200 there is no browser with tons of included features. We need to provide the certificate ourselves!
 
-In the browser of our choice we can go to random.org, click on the certificate icon in the beginning of the location field, and get the details.
+In the browser of our choice we can go to random.org, click on the certificate icon in the beginning of the location field, and get the details. We show this process on two different platforms it is different from browser to browser too.
 
 ![Browser Certificate Information](images/random-certificate.png)
+![Browser Certificate Information](images/random-certificate-mac.png)
 
-Clicking on the certificate name will open a dialog from the OS. Under Windows the dialog looks as follows. We will have to open the third tab here. In this tab we need to select the root certificate (top of the tree) and view the details.
+Clicking on the certificate name will open a dialog from the OS. Under Windows/Mac the dialog looks as follows. We will have to open the third/fourth tab here. In this tab we need to select the root certificate (top of the tree) and view the details.
 
 ![Random.org Certificate Path](images/certificate-path.png)
+![Random.org Certificate Path](images/certificate-path-mac.png)
 
-The certificate itself can then be extracted via the certificate details.
+The certificate itself can then be extracted from the details tab.
 
 ![Random.org Certificate Details](images/certificate-details.png)
+![Random.org Certificate Details](images/certificate-details-mac.png)
 
-We now need to perform the "Copy to file" action. Export the certificate as a *.cer*-file using the DER encoding. The certificate now needs to be stored on the CC3200. The following instructions should help us get going:
+We now need to click on the "Copy to File"/"Export" button to export the certificate as a *.cer*-file using the DER encoding. The certificate now needs to be stored on the CC3200. Note that so far we could only save executable code on the CC3200 via Energia and had little control. The following instructions should help us get going:
 
-1. Download and start [UniFlash](http://www.ti.com/tool/uniflash) for the CC3200.
+1. Download and start [UniFlash](http://www.ti.com/tool/uniflash) for the CC3200. Unfortunately UniFlash is only available for Windows and Linux.
 2. In Uniflash, click the "add file" operation.
 3. Name the file to `/cert/random.pem`.
 4. In the url field we select the location where we stored the root certificate.
@@ -464,7 +467,7 @@ Once we started UniFlash we need to create a new configuration. The following sc
 
 The UniFlash application can only program the CC3200 when no other application is accessing the same COM port. Hence we need to disable the Serial Monitor from Energia. Otherwise, we will get a failure message.
 
-The device needs to be in program mode (J8 and SOP2 disconnected) and resetted once told to be programmed.
+The device needs to be in program mode (J8 and SOP2 disconnected) and resetted once told to be programmed. Now let's get back to our secure HTTP request.
 
 For making secure GET requests we use the following function declaration.
 
@@ -472,7 +475,7 @@ For making secure GET requests we use the following function declaration.
 bool httpSecureGetRequest(char* hostname, char* path, char* certificate);
 ```
 
-The function itself is quite similar to the other one. The changes are all related to introduce the mandatory security layer on top.
+The function itself is quite similar to the other one. The changes are all related to the mandatory security layer on top of what we already had.
 
 ```C
 #include <Energia.h>
@@ -483,7 +486,7 @@ bool httpSecureGetRequest(char* host, char* path, char* cert) {
   String certificate = String(cert);
   String head_post = "GET " + String(path) + " HTTP/1.1";
   String head_host = "Host: " + hostname;
-  String request = head_post + "\n" + 
+  String request = head_post + "\n" +
                    head_host + "\n\n";
 
   char receive_msg_buffer[1024];
@@ -493,7 +496,7 @@ bool httpSecureGetRequest(char* host, char* path, char* cert) {
   SlSockSecureMask cipher { SL_SEC_MASK_TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA };
   SlSockSecureMethod method { SL_SO_SEC_METHOD_SSLv3_TLSV1_2 };
   SlTimeval_t timeout { .tv_sec = 45, .tv_usec = 0 };
-  
+
   if (sl_NetAppDnsGetHostByName((signed char*)hostname.c_str(), hostname.length(), &host_ip, SL_AF_INET)) {
     return false;
   }
@@ -512,7 +515,7 @@ bool httpSecureGetRequest(char* host, char* path, char* cert) {
       sl_Send(socket_handle, request.c_str(), request.length(), 0) >= 0 &&
       sl_Recv(socket_handle, receive_msg_buffer, sizeof(receive_msg_buffer), 0) >= 0) {
     Serial.println(receive_msg_buffer);
-    success = true;  
+    success = true;
   }
 
   sl_Close(socket_handle);
@@ -531,7 +534,7 @@ The following methods exists:
 * `SL_SO_SEC_METHOD_SSLv3_TLSV1_2` for SSL 3 / TLS 1.2
 * `SL_SO_SEC_METHOD_DLSV1` for DTL 1.0
 
-The right encryption mode need sto be selected as well. Here the following options exist:
+The right encryption mode needs to be selected as well. Here the following options exist:
 
 * `SL_SEC_MASK_SECURE_DEFAULT`
 * `SL_SEC_MASK_SSL_RSA_WITH_RC4_128_SHA`
