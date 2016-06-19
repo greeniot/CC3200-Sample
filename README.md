@@ -71,6 +71,8 @@ While you can do everything from the built in editor, you'll probably quickly ge
 
 ### The Code
 
+The [reference](http://energia.nu/Reference_Index.html) section of the Energie homepage will be your best friend when programming the CC3200 LaunchPad, especially in figuring out the inbuilt IO functions. Make sure to also check out the example sketches in *File* / *Examples*.
+
 The board comes with three LEDs that can be used for simple showcases, testing and prototyping. (Remember that whenever we can blink an LED we can basically control anything.)
 
 * `RED_LED` (29)
@@ -134,13 +136,13 @@ Now it's time to connect the LaunchPad and upload our program!
 
 ### Connecting the LaunchPad
 
-The easiest way to get it on the LaunchPad is to press `CTRL + M` in Energia. This will compile the binaries, upload the code, open the serial monitor, and run the application. However, by design the LaunchPad does not come with a very programmer friendly method of dealing with the reprogramming. It is required to set different jumpers to go from run-mode to program-mode and back again.
+The easiest way to get it on the LaunchPad is to press `CTRL + M` in Energia. This will compile the binaries, upload the code, open the serial monitor, and run the application. However, by design the LaunchPad does not offer a very programmer friendly method for a quick build - test - debug loop. It is required to set different jumpers to go from run-mode to program-mode and back again.
 
-The following image shows how this can be circumvented using the J8 (TOP) connector together with the SOP2 (BOTTOM).
+The following image shows a neat workaround using the J8 (TOP) connector together with the SOP2 (BOTTOM).
 
 ![CC3200 Jumpers for Quick Execution](images/jumper.png)
 
-The following instructions give some more detail:
+Here are the detailed step-by-step instructions:
 
 1. We start by removing both jumpers J8 and SOP2 (if installed).
 2. With the USB connector facing up, we connect one side of the jumper wire to the top of J8 and the other side to the bottom of SOP2.
